@@ -12,3 +12,5 @@ Tags can be customized in tags.go
 
 This is designed for use inside HTML - *DO NOT* use it inside ```<script>```
 tags or ```<style>``` tags!
+
+This code is licensed under the FreeBSD license, described in the LICENSE file.
