@@ -1,7 +1,10 @@
 package moeparser
 
 import (
+	"bytes"
+	"html/template"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -77,7 +80,7 @@ func BbCodeParse(b []byte) ([]byte, error) {
 			_, cok = BbCodeTags[tagData[0][1:]]
 		}
 		if ok {
-			output += body[:tagLoc[0]]
+		output += body[:tagLoc[0]]
 			body = body[tagLoc[1]:]
 
 			args := make([]string, 2)
@@ -118,16 +121,15 @@ func BbCodeParse(b []byte) ([]byte, error) {
 				output += htmlTags.OutputFunc(args)
 			} else {
 				for i, tag := range htmlTags.Tags {
-					output += "<" + tag
+					templStr := "<" + tag
 
 					if len(htmlTags.Classes) > i {
 						if classes := htmlTags.Classes[i]; classes != nil {
-							output += " class=\""
+							templStr += " class=\""
 							for _, class := range classes {
-								// TODO: use golang html/template for secure escaping
-								output += " " + class
+								templStr += " " + class
 							}
-							output += "\""
+							templStr += "\""
 						}
 					}
 
@@ -135,8 +137,7 @@ func BbCodeParse(b []byte) ([]byte, error) {
 						if attrs := htmlTags.Attributes[i]; attrs != nil {
 							for i, attr := range attrs {
 								if args[i] != "" {
-									// TODO: use golang html/template for secure escaping
-									output += " " + attr + "=\"" + args[i] + "\""
+									templStr += " " + attr + "=\"{{index . " + strconv.Itoa(int(i)) + "}}\""
 								}
 							}
 						}
@@ -145,17 +146,28 @@ func BbCodeParse(b []byte) ([]byte, error) {
 					if len(htmlTags.CssProps) > i {
 						if cssProps := htmlTags.CssProps[i]; cssProps != nil {
 							for i, cssProp := range cssProps {
-								output += " style=\""
+								templStr += " style=\""
 								if args[i] != "" {
-									// TODO: use golang html/template for secure escaping
-									output += cssProp + ": " + args[i] + ";"
+									templStr += cssProp + ": {{index . " + strconv.Itoa(int(i)) + "}};"
 								}
-								output += "\""
+								templStr += "\""
 							}
 						}
 					}
 
-					output += ">"
+					templStr += ">"
+
+					tmpl, err := template.New("elementTemplate").Parse(templStr)
+					if err != nil {
+						return nil, err
+					}
+
+					eleBuffer := bytes.Buffer{}
+					err = tmpl.Execute(&eleBuffer, args)
+					if err != nil {
+						return nil, err
+					}
+					output += eleBuffer.String()
 				}
 			}
 

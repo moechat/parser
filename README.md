@@ -1,8 +1,6 @@
 MoeParser
 =========
 
-**CURRENTLY NOT SECURE!**
-
 A (hopefully) XSS-secured parser for BBCode and chat-style markdown used in
 MoeChat, written in pure Go.
 
