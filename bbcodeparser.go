@@ -64,8 +64,10 @@ func closeNTags(tagPairStack *Stack, n int) string {
 func closeTags(tagPair *bbTagPair) string {
 	endTags := ""
 	if tagPair.htmlTag.Tags != nil {
-		for _, tag := range tagPair.htmlTag.Tags {
-			endTags = "</" + tag + ">" + endTags
+		if tagPair.htmlTag.Options & HtmlSingle == 0 {
+			for _, tag := range tagPair.htmlTag.Tags {
+				endTags = "</" + tag + ">" + endTags
+			}
 		}
 	}
 	return endTags
@@ -100,7 +102,7 @@ func BbCodeParse(b string) (string, error) {
 				args[0] = tagData[1]
 			}
 
-			if htmlTags.Options & TagBodyAsArg != 0 || htmlTags.Options & AllowTagBodyAsFirstArg != 0 {
+			if htmlTags.Options & (TagBodyAsArg | AllowTagBodyAsFirstArg) != 0 {
 				closeTagRe, err := BbCloseTag(tagData[0])
 				if err != nil {
 					return "", err
@@ -108,22 +110,29 @@ func BbCodeParse(b string) (string, error) {
 				closeTagLoc := closeTagRe.FindIndex([]byte(body))
 				if closeTagLoc == nil {
 					if htmlTags.Options & PossibleSingle == 0 {
-						if htmlTags.Options & TagBodyAsArg != 0 {
-							args[1] = body[tagLoc[1]:]
-						}
 						if htmlTags.Options & AllowTagBodyAsFirstArg != 0 && args[0] == "" {
 							args[0] = body[tagLoc[1]:]
 						}
-						body = ""
+						if htmlTags.Options & TagBodyAsArg != 0 {
+							args[1] = body[tagLoc[1]:]
+							body = ""
+						}
 					}
 				} else {
-					if htmlTags.Options & TagBodyAsArg != 0 {
-						args[1] = body[:closeTagLoc[0]]
+					tagRe, err := BbTag(tagData[0])
+					if err != nil {
+						return "", err
 					}
-					if htmlTags.Options & AllowTagBodyAsFirstArg != 0 && args[0] == "" {
-						args[0] = body[:closeTagLoc[0]]
+					openTagLoc := tagRe.FindIndex([]byte(body))
+					if htmlTags.Options & PossibleSingle == 0 || openTagLoc == nil || closeTagLoc[0] < openTagLoc[0] {
+						if htmlTags.Options & AllowTagBodyAsFirstArg != 0 && args[0] == "" {
+							args[0] = body[:closeTagLoc[0]]
+						}
+						if htmlTags.Options & TagBodyAsArg != 0 {
+							args[1] = body[:closeTagLoc[0]]
+							body = body[closeTagLoc[1]:]
+						}
 					}
-					body = body[closeTagLoc[1]:]
 				}
 			}
 
@@ -202,8 +211,6 @@ func BbCodeParse(b string) (string, error) {
 					output += closeTags(tagStack.Pop())
 					body = body[closeTagLoc[1]:]
 				}
-			} else if htmlTags.Options & HtmlSingle != 0 {
-				tagStack.Pop()
 			} else if htmlTags.Options & PossibleSingle != 0 {
 				closeTagRe, err := BbCloseTag(tagData[0])
 				if err != nil {
@@ -216,14 +223,17 @@ func BbCodeParse(b string) (string, error) {
 						return "", err
 					}
 					openTagLoc := tagRe.FindIndex([]byte(body))
-					if openTagLoc != nil && openTagLoc[0] > closeTagLoc[0] {
-						output += closeTags(tagStack.Pop())
+					if openTagLoc != nil && openTagLoc[0] < closeTagLoc[0] {
+						if htmlTags.Options & HtmlSingle == 0 {
+							output += closeTags(tagStack.Pop())
+						}
 					}
 				} else {
-					output += closeTags(tagStack.Pop())
+					if htmlTags.Options & HtmlSingle == 0 {
+						output += closeTags(tagStack.Pop())
+					}
 				}
 			}
-
 		} else if cok {
 			tagStackCopy := &Stack{nodes: tagStack.nodes, count: tagStack.count}
 			foundMatch := false

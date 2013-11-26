@@ -99,7 +99,7 @@ var BbCodeTags = map[string]HtmlTags {
 		Attributes: []map[int8]string{map[int8]string{0: "href"}},
 	},
 	"img": HtmlTags{
-		Options: (AllowTagBodyAsFirstArg | PossibleSingle | HtmlSingle),
+		Options: (AllowTagBodyAsFirstArg | TagBodyAsArg | PossibleSingle | HtmlSingle),
 		Tags: []string{"img"},
 		Attributes: []map[int8]string{map[int8]string{0: "src", 1: "title"}},
 	},
