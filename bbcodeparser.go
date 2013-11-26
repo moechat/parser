@@ -71,10 +71,10 @@ func closeTags(tagPair *bbTagPair) string {
 	return endTags
 }
 
-func BbCodeParse(b []byte) ([]byte, error) {
+func BbCodeParse(b string) (string, error) {
 	tagStack := &Stack{nodes: make([]*bbTagPair, 10)}
 	output := ""
-	body := string(b)
+	body := b
 	for body != "" {
 		tagLoc := bbCodeRe.FindIndex([]byte(body))
 
@@ -103,7 +103,7 @@ func BbCodeParse(b []byte) ([]byte, error) {
 			if htmlTags.Options & TagBodyAsArg != 0 || htmlTags.Options & AllowTagBodyAsFirstArg != 0 {
 				closeTagRe, err := BbCloseTag(tagData[0])
 				if err != nil {
-					return nil, err
+					return "", err
 				}
 				closeTagLoc := closeTagRe.FindIndex([]byte(body))
 				if closeTagLoc == nil {
@@ -173,13 +173,13 @@ func BbCodeParse(b []byte) ([]byte, error) {
 
 					tmpl, err := template.New("elementTemplate").Parse(templStr)
 					if err != nil {
-						return nil, err
+						return "", err
 					}
 
 					eleBuffer := bytes.Buffer{}
 					err = tmpl.Execute(&eleBuffer, args)
 					if err != nil {
-						return nil, err
+						return "", err
 					}
 					output += eleBuffer.String()
 				}
@@ -190,7 +190,7 @@ func BbCodeParse(b []byte) ([]byte, error) {
 			if htmlTags.Options & NoParseInner != 0 {
 				closeTagRe, err := BbCloseTag(tagData[0])
 				if err != nil {
-					return nil, err
+					return "", err
 				}
 				closeTagLoc := closeTagRe.FindIndex([]byte(body))
 
@@ -207,13 +207,13 @@ func BbCodeParse(b []byte) ([]byte, error) {
 			} else if htmlTags.Options & PossibleSingle != 0 {
 				closeTagRe, err := BbCloseTag(tagData[0])
 				if err != nil {
-					return nil, err
+					return "", err
 				}
 				closeTagLoc := closeTagRe.FindIndex([]byte(body))
 				if closeTagLoc != nil {
 					tagRe, err := BbTag(tagData[0])
 					if err != nil {
-						return nil, err
+						return "", err
 					}
 					openTagLoc := tagRe.FindIndex([]byte(body))
 					if openTagLoc != nil && openTagLoc[0] > closeTagLoc[0] {
@@ -248,5 +248,5 @@ func BbCodeParse(b []byte) ([]byte, error) {
 	}
 
 	output += closeNTags(tagStack, tagStack.count)
-	return []byte(output), nil
+	return output, nil
 }
