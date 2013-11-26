@@ -8,10 +8,14 @@ import (
 	"strings"
 )
 
-var bbCodeRe = regexp.MustCompile("\\[(.*)\\]")
+var bbCodeRe = regexp.MustCompile("\\[([^\\]|^\\[]*)\\]")
 
 func BbCloseTag(name string) (*regexp.Regexp, error) {
 	return regexp.Compile("\\[\\/"+name+"\\]")
+}
+
+func BbTag(name string) (*regexp.Regexp, error) {
+	return regexp.Compile("\\["+name+"(=.*)?\\]")
 }
 
 type bbTagPair struct {
@@ -25,7 +29,7 @@ type Stack struct {
 }
 
 func (s *Stack) Push(n *bbTagPair) {
-	s.nodes = append(s.nodes, n)
+	s.nodes = append(s.nodes[:s.count], n)
 	s.count++
 }
 
@@ -41,27 +45,34 @@ func (s *Stack) Top() *bbTagPair {
 	if s.count == 0 {
 		return nil
 	}
-	return s.nodes[s.count]
+	return s.nodes[s.count-1]
 }
 
 func (s *Stack) TopFromN(n int) *Stack {
 	return &Stack{nodes: s.nodes[n:], count: len(s.nodes)-n}
 }
 
-func closeTags(tagPairStack *Stack) string {
+func closeNTags(tagPairStack *Stack, n int) string {
 	endTags := ""
-	for tagPair := tagPairStack.Pop(); tagPair != nil; tagPair = tagPairStack.Pop() {
-		if tagPair.htmlTag.Tags != nil {
-			for _, tag := range tagPair.htmlTag.Tags {
-				endTags = "<" + tag + ">" + endTags
-			}
+	for i := 0; i < n; i++ {
+		tagPair := tagPairStack.Pop()
+		endTags += closeTags(tagPair)
+	}
+	return endTags
+}
+
+func closeTags(tagPair *bbTagPair) string {
+	endTags := ""
+	if tagPair.htmlTag.Tags != nil {
+		for _, tag := range tagPair.htmlTag.Tags {
+			endTags = "</" + tag + ">" + endTags
 		}
 	}
 	return endTags
 }
 
 func BbCodeParse(b []byte) ([]byte, error) {
-	tagStack := &Stack{nodes: []*bbTagPair{&bbTagPair{}}}
+	tagStack := &Stack{nodes: make([]*bbTagPair, 10)}
 	output := ""
 	body := string(b)
 	for body != "" {
@@ -79,34 +90,37 @@ func BbCodeParse(b []byte) ([]byte, error) {
 		if tagData[0][0] == '/' {
 			_, cok = BbCodeTags[tagData[0][1:]]
 		}
+
 		if ok {
-		output += body[:tagLoc[0]]
+			output += body[:tagLoc[0]]
 			body = body[tagLoc[1]:]
 
 			args := make([]string, 2)
-			args[0] = tagData[1]
+			if len(tagData) == 2 {
+				args[0] = tagData[1]
+			}
 
-			if htmlTags.Options ^ TagBodyAsArg != 0 || htmlTags.Options ^ AllowTagBodyAsFirstArg != 0 {
+			if htmlTags.Options & TagBodyAsArg != 0 || htmlTags.Options & AllowTagBodyAsFirstArg != 0 {
 				closeTagRe, err := BbCloseTag(tagData[0])
 				if err != nil {
 					return nil, err
 				}
 				closeTagLoc := closeTagRe.FindIndex([]byte(body))
 				if closeTagLoc == nil {
-					if htmlTags.Options ^ PossibleSingle == 0 {
-						if htmlTags.Options ^ TagBodyAsArg != 0 {
+					if htmlTags.Options & PossibleSingle == 0 {
+						if htmlTags.Options & TagBodyAsArg != 0 {
 							args[1] = body[tagLoc[1]:]
 						}
-						if htmlTags.Options ^ AllowTagBodyAsFirstArg != 0 && args[0] == "" {
+						if htmlTags.Options & AllowTagBodyAsFirstArg != 0 && args[0] == "" {
 							args[0] = body[tagLoc[1]:]
 						}
 						body = ""
 					}
 				} else {
-					if htmlTags.Options ^ TagBodyAsArg != 0 {
+					if htmlTags.Options & TagBodyAsArg != 0 {
 						args[1] = body[:closeTagLoc[0]]
 					}
-					if htmlTags.Options ^ AllowTagBodyAsFirstArg != 0 && args[0] == "" {
+					if htmlTags.Options & AllowTagBodyAsFirstArg != 0 && args[0] == "" {
 						args[0] = body[:closeTagLoc[0]]
 					}
 					body = body[closeTagLoc[1]:]
@@ -136,7 +150,7 @@ func BbCodeParse(b []byte) ([]byte, error) {
 					if len(htmlTags.Attributes) > i {
 						if attrs := htmlTags.Attributes[i]; attrs != nil {
 							for i, attr := range attrs {
-								if args[i] != "" {
+								if len(args) > int(i) && args[i] != "" {
 									templStr += " " + attr + "=\"{{index . " + strconv.Itoa(int(i)) + "}}\""
 								}
 							}
@@ -173,28 +187,59 @@ func BbCodeParse(b []byte) ([]byte, error) {
 
 			tagStack.Push(&bbTagPair{htmlTags, tagData[0]})
 
-			if htmlTags.Options ^ HtmlSingle != 0 {
-				tagStack.Pop()
-			}
-
-			if htmlTags.Options ^ PossibleSingle != 0 {
+			if htmlTags.Options & NoParseInner != 0 {
 				closeTagRe, err := BbCloseTag(tagData[0])
 				if err != nil {
 					return nil, err
 				}
 				closeTagLoc := closeTagRe.FindIndex([]byte(body))
+
 				if closeTagLoc == nil {
-					output += closeTags(tagStack.TopFromN(tagStack.count-1))
+					output += body
+					body = ""
+				} else {
+					output += body[:closeTagLoc[0]]
+					output += closeTags(tagStack.Pop())
+					body = body[closeTagLoc[1]:]
 				}
+			} else if htmlTags.Options & HtmlSingle != 0 {
 				tagStack.Pop()
+			} else if htmlTags.Options & PossibleSingle != 0 {
+				closeTagRe, err := BbCloseTag(tagData[0])
+				if err != nil {
+					return nil, err
+				}
+				closeTagLoc := closeTagRe.FindIndex([]byte(body))
+				if closeTagLoc != nil {
+					tagRe, err := BbTag(tagData[0])
+					if err != nil {
+						return nil, err
+					}
+					openTagLoc := tagRe.FindIndex([]byte(body))
+					if openTagLoc != nil && openTagLoc[0] > closeTagLoc[0] {
+						output += closeTags(tagStack.Pop())
+					}
+				} else {
+					output += closeTags(tagStack.Pop())
+				}
 			}
+
 		} else if cok {
 			tagStackCopy := &Stack{nodes: tagStack.nodes, count: tagStack.count}
+			foundMatch := false
 			for tagPair := tagStackCopy.Pop(); tagPair != nil; tagPair = tagStackCopy.Pop() {
 				if tagPair.bbName == tagData[0][1:] {
-					output += closeTags(tagStack.TopFromN(tagStackCopy.count))
+					output += body[:tagLoc[0]]
+					output += closeNTags(tagStack, tagStack.count - tagStackCopy.count)
+					body = body[tagLoc[1]:]
+					foundMatch = true
 					break
 				}
+			}
+
+			if !foundMatch {
+				output += body[tagLoc[0]:tagLoc[1]]
+				body = body[tagLoc[1]:]
 			}
 		} else {
 			output += body[:tagLoc[1]]
@@ -202,6 +247,6 @@ func BbCodeParse(b []byte) ([]byte, error) {
 		}
 	}
 
-	output += closeTags(tagStack)
+	output += closeNTags(tagStack, tagStack.count)
 	return []byte(output), nil
 }

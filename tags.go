@@ -11,6 +11,7 @@ const (
 	HtmlSingle = 1 << iota // The HTML tag does not have a closing element
 	NoParseInner = 1 << iota // This makes MoeParser ignore any tags inside this tags body. It will be ignored if the Single bit is set.
 	TagBodyAsArg = 1 << iota // This makes the text inside of tag and passes it as an arg for the output. The text inside will not be parsed.
+	NumberArgToPx = 1 << iota // Converts a number to the number + "px" (ie 12 -> 12px)
 
 	// Non-BBCode specific args
 	AllowInWord = 1 << iota // This makes MoeParser match the tags that don't either start with whitespace or the beginning of a line
@@ -80,26 +81,27 @@ var BbCodeTags = map[string]HtmlTags {
 	"code": HtmlTags{Options: NoParseInner, Tags: []string{"pre", "code"}},
 	"color": HtmlTags{
 		Tags: []string{"span"},
-		CssProps: []map[int8]string{map[int8]string{1: "color"}},
+		CssProps: []map[int8]string{map[int8]string{0: "color"}},
 	},
 	"colour": HtmlTags{
 		Tags: []string{"span"},
-		CssProps: []map[int8]string{map[int8]string{1: "color"}},
+		CssProps: []map[int8]string{map[int8]string{0: "color"}},
 	},
 	"size": HtmlTags{
+		Options: NumberArgToPx,
 		Tags: []string{"span"},
-		CssProps: []map[int8]string{map[int8]string{1: "font-size"}},
+		CssProps: []map[int8]string{map[int8]string{0: "font-size"}},
 	},
 	"noparse": HtmlTags{Options: NoParseInner},
 	"url": HtmlTags{
-		Options: AllowTagBodyAsFirstArg & PossibleSingle,
-		Tags: []string{"span"},
-		Attributes: []map[int8]string{map[int8]string{1: "href"}},
+		Options: (AllowTagBodyAsFirstArg | PossibleSingle),
+		Tags: []string{"a"},
+		Attributes: []map[int8]string{map[int8]string{0: "href"}},
 	},
 	"img": HtmlTags{
-		Options: AllowTagBodyAsFirstArg & PossibleSingle & HtmlSingle,
-		Tags: []string{"span"},
-		Attributes: []map[int8]string{map[int8]string{1: "src", 2: "title"}},
+		Options: (AllowTagBodyAsFirstArg | PossibleSingle | HtmlSingle),
+		Tags: []string{"img"},
+		Attributes: []map[int8]string{map[int8]string{0: "src", 1: "title"}},
 	},
 	"s": HtmlTags{Tags: []string{"s"}},
 	"samp": HtmlTags{Tags: []string{"samp"}},
