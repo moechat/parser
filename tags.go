@@ -55,52 +55,52 @@ var MoeTags = map[interface{}]HtmlTags{
 	MoeMatcher{
 		OpenRe:  regexp.MustCompile("`"),
 		CloseRe: regexp.MustCompile("`"),
-	}: HtmlTags{Options: NoParseInner, Tags: []string{"pre", "code"}},
+	}: {Options: NoParseInner, Tags: []string{"pre", "code"}},
 	MoeMatcher{
 		OpenRe:  regexp.MustCompile("\\*"),
 		CloseRe: regexp.MustCompile("\\*"),
-	}: HtmlTags{Tags: []string{"i"}},
+	}: {Tags: []string{"i"}},
 	MoeMatcher{
 		OpenRe:  regexp.MustCompile("\\*\\*"),
 		CloseRe: regexp.MustCompile("\\*\\*"),
-	}: HtmlTags{Tags: []string{"b"}},
+	}: {Tags: []string{"b"}},
 }
 
 // BBCode tags are parsed using a specific BBCode parser, but behaves in the same way as a TagMatcher with OpenRe=\[{{.Name}}(?:=(.*))?\] and CloseRe=\[\/{{.Name}}\], so one should regex escape any special characters in Name. One can insert use-case specific BBCode tags to this map.
 var BbCodeTags = map[string]HtmlTags{
-	"b": HtmlTags{Tags: []string{"b"}},
-	"i": HtmlTags{Tags: []string{"i"}},
-	"u": HtmlTags{
+	"b": {Tags: []string{"b"}},
+	"i": {Tags: []string{"i"}},
+	"u": {
 		Tags:    []string{"span"},
-		Classes: [][]string{[]string{"underline"}},
+		Classes: [][]string{{"underline"}},
 	},
-	"pre":  HtmlTags{Tags: []string{"pre"}},
-	"code": HtmlTags{Options: NoParseInner, Tags: []string{"pre", "code"}},
-	"color": HtmlTags{
+	"pre":  {Tags: []string{"pre"}},
+	"code": {Options: NoParseInner, Tags: []string{"pre", "code"}},
+	"color": {
 		Tags:     []string{"span"},
-		CssProps: []map[int8]string{map[int8]string{0: "color"}},
+		CssProps: []map[int8]string{{0: "color"}},
 	},
-	"colour": HtmlTags{
+	"colour": {
 		Tags:     []string{"span"},
-		CssProps: []map[int8]string{map[int8]string{0: "color"}},
+		CssProps: []map[int8]string{{0: "color"}},
 	},
-	"size": HtmlTags{
+	"size": {
 		Options:  NumberArgToPx,
 		Tags:     []string{"span"},
-		CssProps: []map[int8]string{map[int8]string{0: "font-size"}},
+		CssProps: []map[int8]string{{0: "font-size"}},
 	},
-	"noparse": HtmlTags{Options: NoParseInner},
-	"url": HtmlTags{
+	"noparse": {Options: NoParseInner},
+	"url": {
 		Options:    (AllowTagBodyAsFirstArg | PossibleSingle),
 		Tags:       []string{"a"},
-		Attributes: []map[int8]string{map[int8]string{0: "href"}},
+		Attributes: []map[int8]string{{0: "href"}},
 	},
-	"img": HtmlTags{
+	"img": {
 		Options:    (AllowTagBodyAsFirstArg | TagBodyAsArg | PossibleSingle | HtmlSingle),
 		Tags:       []string{"img"},
-		Attributes: []map[int8]string{map[int8]string{0: "src", 1: "title"}},
+		Attributes: []map[int8]string{{0: "src", 1: "title"}},
 	},
-	"s":    HtmlTags{Tags: []string{"s"}},
-	"samp": HtmlTags{Tags: []string{"samp"}},
-	"q":    HtmlTags{Tags: []string{"q"}},
+	"s":    {Tags: []string{"s"}},
+	"samp": {Tags: []string{"samp"}},
+	"q":    {Tags: []string{"q"}},
 }
