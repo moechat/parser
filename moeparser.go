@@ -1,3 +1,6 @@
+/*
+ This package implements a parser for any markup-style tags, including BBCode tags.
+*/
 package moeparser
 
 import (
