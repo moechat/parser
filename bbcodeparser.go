@@ -90,10 +90,10 @@ func BbCodeParse(b string) (string, error) {
 		}
 
 		tagData := strings.SplitN(body[tagLoc[0]+1:tagLoc[1]-1], "=", 2)
-		htmlTags, ok := BbCodeTags[tagData[0]]
+		htmlTags, ok := bbCodeTags[tagData[0]]
 		cok := false
 		if tagData[0][0] == '/' {
-			_, cok = BbCodeTags[tagData[0][1:]]
+			_, cok = bbCodeTags[tagData[0][1:]]
 		}
 
 		if ok {
