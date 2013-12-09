@@ -1,7 +1,8 @@
-package moeparser
+package moeparser_test
 
 import (
 	"fmt"
+	"moeparser"
 	"testing"
 )
 
