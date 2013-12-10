@@ -171,13 +171,13 @@ func BbCodeParse(b string) (string, error) {
 
 					if len(htmlTags.CssProps) > i {
 						if cssProps := htmlTags.CssProps[i]; cssProps != nil {
+							templStr += " style=\""
 							for i, cssProp := range cssProps {
-								templStr += " style=\""
-								if args[i] != "" {
+								if len(args) > int(i) && args[i] != "" {
 									templStr += cssProp + ": {{index . " + strconv.Itoa(int(i)) + "}};"
 								}
-								templStr += "\""
 							}
+							templStr += "\""
 						}
 					}
 
