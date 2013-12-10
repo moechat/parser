@@ -26,27 +26,35 @@ const (
 
 // A token class recognized by the lexer
 type TokenClass interface {
-	GetOptions() TokenOptions
-	GetType() TokenClassType
+	GetOptions() TokenOptions // Returns options for the token class
+	GetType() TokenClassType  // Returns the type of the token class
 
-	GetTokens([]string) []Token
+	GetTokens([]string, bool) []Token // Returns instances of the tokenClass with args set
 }
 
 // A token returned by the lexer and recognized by the parser
 type Token interface {
-	Copy() Token      // Get a copy of the token
-	SetArgs([]string) // Set the results of the capturing groups
+	Copy() Token // Get a copy of the token
 
+	SetArgs([]string)           // Set the args of the token
 	GetOutput() (string, error) // Get the output of the token
 }
 
 // An implementation of Token used to represent text that isn't matched by any other tokens
 // i.e. "hi" in <p>hi</p>
-type PlainText struct {
+type plainText struct {
 	Body string
 }
 
-// Set the args of a PlainText object
-func (pt *PlainText) setArgs(args []string) {
-	pt.Body = args[0]
+func (pt *plainText) setBody(body string) {
+	pt.Body = body
+}
+
+func (pt *plainText) Copy() *plainText {
+	return &plainText{Body: pt.Body}
+}
+
+// Returns the PlainText's body
+func (pt *plainText) GetOutput() (string, error) {
+	return pt.Body, nil
 }
