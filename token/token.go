@@ -1,4 +1,4 @@
-package moeparser
+package token
 
 type TokenOptions uint8
 

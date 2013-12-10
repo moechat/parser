@@ -1,4 +1,4 @@
-package moecode
+package moeparser
 
 import (
 	"bytes"

@@ -1,21 +1,20 @@
-package moeparser
+package lexer
 
 import (
 	"errors"
+	"github.com/moechat/moeparser/token"
 )
-
-type TokenClassMap map[string]TokenClass
 
 // The Lexer, which tokenizes text
 type Lexer struct {
-	TokenClasses TokenClassMap // The possible token classes
+	TokenClasses map[string]token.TokenClass // The possible token classes
 
 	ExprTreeRoot *treeNode // The root node for the expression tree
 }
 
 // Creates a new Lexer with the token map given.
 // BuildExprTree is run automatically.
-func New(tokenClasses TokenClassMap) *Lexer {
+func New(tokenClasses map[string]token.TokenClass) *Lexer {
 	ret := &Lexer{tokenClasses, nil}
 	ret.BuildExprTree()
 	return ret
@@ -26,11 +25,11 @@ type treeNode struct {
 	expr     string               // The expression that matches this treeNode
 	children map[string]*treeNode // Possible next characters
 
-	t TokenClass // The Token class that the treeNode is the end of or nil if it is not the end of a token
+	t token.TokenClass // The Token class that the treeNode is the end of or nil if it is not the end of a token
 }
 
 // Adds the passed token class to the token class map.
-func (l *Lexer) AddTokenClass(exprs []string, tokenClass TokenClass) error {
+func (l *Lexer) AddTokenClass(exprs []string, tokenClass token.TokenClass) error {
 	for _, expr := range exprs {
 		if _, ok := l.TokenClasses[expr]; ok {
 			err := errors.New("A token with an identical tag pair has already been inserted!")
@@ -45,20 +44,8 @@ func (l *Lexer) AddTokenClass(exprs []string, tokenClass TokenClass) error {
 	return nil
 }
 
-// Adds a map of token classes to exprs to the token class map
-func (l *Lexer) AddTokenClasses(tokenClasses map[TokenClass][]string) error {
-	for tokenClass, exprs := range tokenClasses {
-		err := l.AddTokenClass(exprs, tokenClass)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Removes the token class from the token class map.
-func (l *Lexer) RemoveTokenClass(tokenClass TokenClass) {
+func (l *Lexer) RemoveTokenClass(tokenClass token.TokenClass) {
 	for i, t := range l.TokenClasses {
 		if t == tokenClass {
 			delete(l.TokenClasses, i)
@@ -75,7 +62,7 @@ func newNode(expr string) *treeNode {
 	return &treeNode{expr: expr, children: make(map[string]*treeNode)}
 }
 
-func (node *treeNode) setTokenClass(t TokenClass) {
+func (node *treeNode) setTokenClass(t token.TokenClass) {
 	node.t = t
 }
 
@@ -117,8 +104,8 @@ func (l *Lexer) BuildExprTree() {
 //
 // If the tree has not been built, tokenize will run BuildCharTree()
 // BuildCharTree() *must* be run if you call AddTokenClass or RemoveTokenClass between Tokenize()'s
-func (l *Lexer) Tokenize(data []byte) []Token {
-	ret := make([]Token, 100)
+func (l *Lexer) Tokenize(data []byte) []token.Token {
+	ret := make([]token.Token, 100)
 
 	return ret
 }
