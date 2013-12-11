@@ -59,13 +59,18 @@ func ExampleLexer_AddTokenClass() {
 
 	l.CompileRegexp() // This is necessary for Tokenize to take into account changes due to AddMoeMatcher or RemoveMoeMatcher
 
-	for _, token := range l.Tokenize("@alice  @bob some text (non-matching)) \n@charlie\n\t@hi\n\r\r\t\t\tarstarts@bob doesn't match.\t@alice") {
+	testStr :=
+		`@alice and @bob say that @charlie sucks because he doesn't use {{insert awesome service here}}`
+
+	for _, token := range l.Tokenize(testStr) {
 		t, err := token.Output()
 		if err != nil {
 			panic(err)
 		}
 		fmt.Print(t)
 	}
-
 	fmt.Println()
+
+	// OUTPUT:
+	// <span class="at-tag user-0"data-uid="0" data-user="alice">alice</span> and <span class="at-tag user-1"data-uid="1" data-user="bob">bob</span> say that @charlie sucks because he doesn't use {{insert awesome service here}}
 }
