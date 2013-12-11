@@ -14,16 +14,20 @@ type Token struct {
 
 	Args *token.TokenArgs // Arguments passed to this HTML Token
 
-	Classes    []string            // HTML element classes
-	ModClasses func(classes []string, args *token.TokenArgs) []string // Change classes to output
+	// The following fields are run through html/template.
+	//
+	// To get a capture group by id, use {{.ById id}}.
+	// Analogously, use {{.ByName name}} to get a capture group by name.
+	//
+	// See http://golang.org/pkg/html/template/ for more details
+	Prefix string // A string to insert before the element
+	Suffix string // A string to insert after the element
+	Classes    []string // HTML element classes
+	Attributes map[string]string // HTML element attributes by argument ID
+	CssProps   map[string]string // CSS Properties by argument ID
 
-	AttributesById map[int]string // HTML element attributes by argument ID
-	AttributesByName map[string]string // HTML element attributes by argument name
-	CssPropsById   map[int]string // CSS Properties by argument ID
-	CssPropsByName   map[string]string // CSS Properties by argument name
-
-	// A custom output function:
-	// if set, the parser will ignore all fields and simply spit out the output.
+	// A custom output function
+	// if set, the parser will ignore all fields and simply spit out the return value.
 	// The input is the array of strings that were captured
 	// Use a $b to represent the body of the tag and $$ for a dollar sign
 	OutputFunc func(*token.TokenArgs) string
@@ -44,46 +48,30 @@ func (e *Token) Output() (string, error) {
 	} else if e.Type == token.CloseType {
 		return fmt.Sprintf("</%s>", e.Name), nil
 	} else {
-		var classes, attrs, styles string
+		templStr := "<" + e.Name
 
-		if e.ModClasses != nil {
-			e.Classes = e.ModClasses(e.Classes, e.Args)
-		}
 		if e.Classes != nil {
-			classes += ` class="`
-			for _, class := range e.Classes {
-				classes += " " + class
-			}
-			classes += `"`
-		}
-
-		for argId, attr := range e.AttributesById {
-			if e.Args.ById(argId) != "" {
-				attrs += fmt.Sprintf(` %s="{{.ById %d}}"`, attr, argId)
-			}
-		}
-		for argName, attr := range e.AttributesByName {
-			if e.Args.ByName(argName) != "" {
-				attrs += fmt.Sprintf(` %s="{{.ByName %s}}"`, attr, argName)
-			}
-		}
-
-		if e.CssPropsById != nil || e.CssPropsByName != nil {
-			styles += ` style="`
-			for argId, cssProp := range e.CssPropsById {
-				if e.Args.ById(argId) != "" {
-					styles += fmt.Sprintf(`%s:{{.ById %d}};`, cssProp, argId)
+			templStr += ` class="`
+			for i, class := range e.Classes {
+				if i != 0 {
+					templStr += " "
 				}
+				templStr += class
 			}
-			for argName, cssProp := range e.CssPropsByName {
-				if e.Args.ByName(argName) != "" {
-					styles += fmt.Sprintf(`%s:{{.ByName %s}};`, cssProp, argName)
-				}
-			}
-			styles += `"`
+			templStr += `"`
 		}
 
-		templStr := fmt.Sprintf(`<%s%s%s%s>`, e.Name, classes, attrs, styles)
+		for attr, value := range e.Attributes {
+			templStr += fmt.Sprintf(` %s="%s"`, attr, value)
+		}
+
+		if e.CssProps != nil {
+			templStr += ` style="`
+			for cssProp, value := range e.CssProps {
+				templStr += cssProp + ":" + value
+			}
+			templStr += `"`
+		}
 
 		tmpl, err := template.New("elementTemplate").Parse(templStr)
 		if err != nil {

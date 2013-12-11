@@ -6,10 +6,9 @@ import (
 	"github.com/moechat/moeparser"
 	"github.com/moechat/moeparser/token"
 	"github.com/moechat/moeparser/token/htmltoken"
-	"testing"
 )
 
-func TestLexer_AddTokenClass(t *testing.T) {
+func ExampleLexer_AddTokenClass() {
 	// The ID's are strings because I'm too lazy to use strconv (and not lazy enough to document the reason, apparently)
 	users := map[string]string{"alice": "0", "bob": "1"}
 
@@ -30,19 +29,19 @@ func TestLexer_AddTokenClass(t *testing.T) {
 				&htmltoken.Token{
 					Name:       "span",
 					Type:       token.SingleType, // This is the default
-					Classes:    []string{"at-tag", ""},
-					ModClasses: func(classes []string, args *token.TokenArgs) []string {
-						classes[1] = "user-" + args.ByName("uid")
-						return classes
+
+					Prefix: "{{.ById 1}}",
+					Classes:    []string{"at-tag", "{{.ByName uid}}"},
+					Attributes: map[string]string{
+						"data-user": "{{.ById 2}}",
+						"data-uid": "{{.ByName uid}}",
 					},
-					AttributesById: map[int]string{2: "data-user"},
-					AttributesByName: map[string]string{"uid": "data-uid"},
-					// CssPropsById/Name} is not necessary here, but behaves in the same way as AttributesId/Name
+					// CssProps is not necessary here, but behaves in the same way as Attributes
 
 					// This is overkill in this case, and here only as an example. Note that OutputFunc, if not nil, makes MoeParser ignore all other options.
 					OutputFunc: func(args *token.TokenArgs) string {
 						output := args.ById(1)
-						output += `<span class="at-tag" `
+						output += `<span class="at-tag user-` + args.ByName("uid") + `"`
 						output += `data-uid="` + args.ByName("uid") + `" `
 						output += `data-user="` + args.ById(2) + `">`
 						output += args.ById(2)
