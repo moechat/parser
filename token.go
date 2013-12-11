@@ -1,15 +1,15 @@
-package token
+package parser
 
 import (
 	"regexp"
 )
 
-type TokenClassOptions uint8
+type TokenClassFlag uint8
 
 // Options for Tokens - return these bits in GetOptions() to implement this behavior
 const (
 	// TODO: Interpret as single if there is no closing tag
-	PossibleSingle TokenClassOptions = 1 << iota
+	PossibleSingle TokenClassFlag = 1 << iota
 	// TODO: This makes MoeParser ignore any tags inside this tags body. It will be ignored if the Single bit is set.
 	NoParseInner
 	// TODO: This makes the text inside of tag and passes it as an arg for the output. The text inside will not be parsed.
@@ -65,8 +65,8 @@ func NewRegexpList(NotRe bool, exprs ...string) RegexpList {
 type TokenClass interface {
 	Regexps() RegexpList // Returns a list of the uncompiled regexps that are mapped to the token class
 
-	Options() TokenClassOptions // Returns options for the token class
-	Type() TokenType            // Returns the type of the token class
+	Options() TokenClassFlag // Returns options for the token class
+	Type() TokenType         // Returns the type of the token class
 
 	Name() string // Returns a unique name for the token class. This is used as the regexp capturing group name, and will break Lexer.CompileRegexp if an invalid name is used
 
@@ -112,4 +112,29 @@ type Token interface {
 
 	SetArgs(*TokenArgs)      // Set the args of the token
 	Output() (string, error) // Get the output of the token
+}
+
+// A special case of Token used to represent text that isn't matched by any other tokens
+// i.e. "hi" in <p>hi</p>
+type TextToken struct {
+	body string
+}
+
+func NewTextToken(body string) *TextToken {
+	return &TextToken{body: body}
+}
+
+func (pt *TextToken) setBody(body string) {
+	pt.body = body
+}
+
+func (pt *TextToken) Copy() Token {
+	return &TextToken{body: pt.body}
+}
+
+func (pt *TextToken) SetArgs(*TokenArgs) {}
+
+// Returns the Text's body
+func (pt *TextToken) Output() (string, error) {
+	return pt.body, nil
 }

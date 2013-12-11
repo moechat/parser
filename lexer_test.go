@@ -1,19 +1,16 @@
-package lexer_test
+package parser_test
 
 import (
 	"."
 	"fmt"
-	"github.com/moechat/moeparser"
-	"github.com/moechat/moeparser/token"
-	"github.com/moechat/moeparser/token/htmltoken"
 )
 
 func ExampleLexer_AddTokenClass() {
 	// The ID's are strings because I'm too lazy to use strconv (and not lazy enough to document the reason, apparently)
 	users := map[string]string{"alice": "0", "bob": "1"}
 
-	matcher := moeparser.NewTokenClass(
-		moeparser.TokenClassArgs{
+	matcher := parser.NewTokenClass(
+		parser.TokenClassArgs{
 			ArgModFunc: func(args []string, idByName map[string]int) ([]string, map[string]int) {
 				uid := users[args[idByName["username"]]]
 				uidIndex := len(args)

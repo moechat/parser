@@ -1,20 +1,18 @@
-// This package defines the Lexer type, which is used to convert raw tags into tokens (http://en.wikipedia.org/wiki/Lexical_analysis)
-//
-// It is implemented using the regexp package, which is implemented using a NFA (http://en.wikipedia.org/wiki/Nondeterministic_finite_automaton), and is thus efficient in this use case.
-package lexer
+package parser
 
 import (
 	"errors"
 	"fmt"
-	"github.com/moechat/moeparser/token"
 	"regexp"
 	"strconv"
 )
 
-// The lexer is an object that contains the definition
+// The Lexer type is used to convert raw text into tokens (http://en.wikipedia.org/wiki/Lexical_analysis)
+//
+// It is implemented using the regexp package, which is implemented using a NFA (http://en.wikipedia.org/wiki/Nondeterministic_finite_automaton), and is thus efficient in this use case.
 type Lexer struct {
-	tokenClasses   map[string]token.TokenClass // The map of TokenClasses by name
-	tokenClassById map[int]token.TokenClass    // The map of TokenClasses by capture group ID
+	tokenClasses   map[string]TokenClass // The map of TokenClasses by name
+	tokenClassById map[int]TokenClass    // The map of TokenClasses by capture group ID
 
 	exprs map[string]bool // The set of expressions that are mapped to some token class
 
@@ -23,7 +21,7 @@ type Lexer struct {
 }
 
 // Creates a new Lexer with the token map given.
-func New(tokenClasses map[string]token.TokenClass) (*Lexer, error) {
+func New(tokenClasses map[string]TokenClass) (*Lexer, error) {
 	ret := &Lexer{
 		tokenClasses: tokenClasses,
 		exprs:        make(map[string]bool),
@@ -45,7 +43,7 @@ func New(tokenClasses map[string]token.TokenClass) (*Lexer, error) {
 }
 
 // Adds the passed token class to the token class map.
-func (l *Lexer) AddTokenClass(tokenClass token.TokenClass) error {
+func (l *Lexer) AddTokenClass(tokenClass TokenClass) error {
 	if _, ok := l.tokenClasses[tokenClass.Name()]; ok {
 		err := errors.New("A TokenClass with the same name already exists!")
 		return err
@@ -68,7 +66,7 @@ func (l *Lexer) AddTokenClass(tokenClass token.TokenClass) error {
 }
 
 // Removes all instances of the token class specified from the token class map.
-func (l *Lexer) RemoveTokenClass(tokenClass token.TokenClass) {
+func (l *Lexer) RemoveTokenClass(tokenClass TokenClass) {
 	for _, re := range tokenClass.Regexps() {
 		delete(l.exprs, re.String())
 	}
@@ -80,7 +78,7 @@ func (l *Lexer) RemoveTokenClass(tokenClass token.TokenClass) {
 //
 // It must be run after adding or removing token classes in order for changes to take effect.
 func (l *Lexer) CompileRegexp() error {
-	l.tokenClassById = make(map[int]token.TokenClass)
+	l.tokenClassById = make(map[int]TokenClass)
 
 	var err error
 
@@ -121,14 +119,14 @@ func (l *Lexer) CompileRegexp() error {
 //
 // If the tree has not been built, tokenize will run BuildCharTree().
 // BuildCharTree() *must* be run if you call AddTokenClass or RemoveTokenClass between Tokenize()'s
-func (l *Lexer) Tokenize(data string) []token.Token {
-	ret := make([]token.Token, 0)
+func (l *Lexer) Tokenize(data string) []Token {
+	ret := make([]Token, 0)
 	subexpNames := l.regexp.SubexpNames()
 
 	for data != "" {
 		indices := l.regexp.FindStringSubmatchIndex(data)
 		if indices == nil {
-			ret = append(ret, token.NewText(data))
+			ret = append(ret, NewTextToken(data))
 			data = ""
 			break
 		}
@@ -136,7 +134,7 @@ func (l *Lexer) Tokenize(data string) []token.Token {
 		for i, tokenClass := range l.tokenClassById {
 			if indices[i*2] >= 0 {
 				if indices[i*2] != 0 {
-					ret = append(ret, token.NewText(data[:indices[i*2]]))
+					ret = append(ret, NewTextToken(data[:indices[i*2]]))
 				}
 
 				exprId, _ := strconv.ParseInt(subexpNames[i][1:3], 16, 8)
@@ -151,12 +149,12 @@ func (l *Lexer) Tokenize(data string) []token.Token {
 				}
 
 				args, idByName = tokenClass.ModifyArgs(args, idByName)
-				tokenArgs := token.NewTokenArgs(args, idByName)
+				tokenArgs := NewTokenArgs(args, idByName)
 
 				if tokenClass.IsValid(tokenArgs) {
 					ret = append(ret, tokenClass.BuildTokens(tokenArgs)...)
 				} else {
-					ret = append(ret, token.NewText(data[indices[i*2]:indices[i*2+1]]))
+					ret = append(ret, NewTextToken(data[indices[i*2]:indices[i*2+1]]))
 				}
 				data = data[indices[i*2+1]:]
 			}
