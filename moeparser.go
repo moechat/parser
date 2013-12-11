@@ -18,27 +18,27 @@ type Parser struct {
 func init() {
 	tokenMap := map[string]token.TokenClass{
 		"code": &TokenClass{
-			name:    "code",
+			name:      "code",
 			regexps:   token.NewRegexpList(true, "`"),
-			options: token.NoParseInner,
-			tokenType:    token.SymmetricType,
+			options:   token.NoParseInner,
+			tokenType: token.SymmetricType,
 			tokens: []token.Token{
 				&htmltoken.Token{Name: "pre"},
 				&htmltoken.Token{Name: "code"},
 			},
 		},
 		"italic": &TokenClass{
-			name:  "italic",
-			regexps: token.NewRegexpList(true, "*"),
-			tokenType:  token.SymmetricType,
+			name:      "italic",
+			regexps:   token.NewRegexpList(true, "*"),
+			tokenType: token.SymmetricType,
 			tokens: []token.Token{
 				&htmltoken.Token{Name: "i"},
 			},
 		},
 		"bold": &TokenClass{
-			name:  "bold",
-			regexps: token.NewRegexpList(true, "**"),
-			tokenType:  token.SymmetricType,
+			name:      "bold",
+			regexps:   token.NewRegexpList(true, "**"),
+			tokenType: token.SymmetricType,
 			tokens: []token.Token{
 				&htmltoken.Token{Name: "b"},
 			},

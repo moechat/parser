@@ -20,9 +20,9 @@ type Token struct {
 	// Analogously, use {{.ByName name}} to get a capture group by name.
 	//
 	// See http://golang.org/pkg/html/template/ for more details
-	Prefix string // A string to insert before the element
-	Suffix string // A string to insert after the element
-	Classes    []string // HTML element classes
+	Prefix     string            // A string to insert before the element
+	Suffix     string            // A string to insert after the element
+	Classes    []string          // HTML element classes
 	Attributes map[string]string // HTML element attributes by argument ID
 	CssProps   map[string]string // CSS Properties by argument ID
 

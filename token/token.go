@@ -63,7 +63,7 @@ func NewRegexpList(NotRe bool, exprs ...string) RegexpList {
 
 // A token class is recognized by the lexer
 type TokenClass interface {
-	Regexps() RegexpList     // Returns a list of the uncompiled regexps that are mapped to the token class
+	Regexps() RegexpList // Returns a list of the uncompiled regexps that are mapped to the token class
 
 	Options() TokenClassOptions // Returns options for the token class
 	Type() TokenType            // Returns the type of the token class
@@ -78,7 +78,7 @@ type TokenClass interface {
 }
 
 type TokenArgs struct {
-	args []string
+	args     []string
 	idByName map[string]int
 
 	size int
@@ -110,6 +110,6 @@ func (ta *TokenArgs) Size() int {
 type Token interface {
 	Copy() Token // Get a copy of the token
 
-	SetArgs(*TokenArgs)        // Set the args of the token
+	SetArgs(*TokenArgs)      // Set the args of the token
 	Output() (string, error) // Get the output of the token
 }

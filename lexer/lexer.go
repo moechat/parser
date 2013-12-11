@@ -139,7 +139,7 @@ func (l *Lexer) Tokenize(data string) []token.Token {
 					ret = append(ret, token.NewText(data[:indices[i*2]]))
 				}
 
-				exprId,_ := strconv.ParseInt(subexpNames[i][1:3], 16, 8)
+				exprId, _ := strconv.ParseInt(subexpNames[i][1:3], 16, 8)
 				tokenRegexp := tokenClass.Regexps()[exprId]
 				args := []string(tokenRegexp.FindStringSubmatch(data[indices[i*2]:indices[i*2+1]]))
 

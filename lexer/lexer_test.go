@@ -27,14 +27,14 @@ func ExampleLexer_AddTokenClass() {
 
 			Tokens: []token.Token{
 				&htmltoken.Token{
-					Name:       "span",
-					Type:       token.SingleType, // This is the default
+					Name: "span",
+					Type: token.SingleType, // This is the default
 
-					Prefix: "{{.ById 1}}",
-					Classes:    []string{"at-tag", "{{.ByName uid}}"},
+					Prefix:  "{{.ById 1}}",
+					Classes: []string{"at-tag", "{{.ByName uid}}"},
 					Attributes: map[string]string{
 						"data-user": "{{.ById 2}}",
-						"data-uid": "{{.ByName uid}}",
+						"data-uid":  "{{.ByName uid}}",
 					},
 					// CssProps is not necessary here, but behaves in the same way as Attributes
 

@@ -13,24 +13,24 @@ type TokenClass struct {
 
 	regexps token.RegexpList // The expressions that map to this token class
 
-	options token.TokenClassOptions // Options for this token class
-	tokenType    token.TokenType    // The type of this token class
+	options   token.TokenClassOptions // Options for this token class
+	tokenType token.TokenType         // The type of this token class
 
 	// A function that modifies arguments (i.e. a function that converts a username to a user ID in @tagging)
 	argModFunc func(args []string, namesById map[string]int) ([]string, map[string]int)
-	isValid func(args *token.TokenArgs) bool
+	isValid    func(args *token.TokenArgs) bool
 
 	tokens []token.Token // The tokens to insert
 }
 
 type TokenClassArgs struct {
-	Name string
-	Options token.TokenClassOptions
-	Type token.TokenType
+	Name       string
+	Options    token.TokenClassOptions
+	Type       token.TokenType
 	ArgModFunc func(args []string, namesById map[string]int) ([]string, map[string]int)
-	IsValid func(args *token.TokenArgs) bool
-	Tokens []token.Token
-	NotRe bool
+	IsValid    func(args *token.TokenArgs) bool
+	Tokens     []token.Token
+	NotRe      bool
 }
 
 func NewTokenClass(args TokenClassArgs, exprs ...string) *TokenClass {
@@ -42,7 +42,7 @@ func NewTokenClass(args TokenClassArgs, exprs ...string) *TokenClass {
 	}
 
 	if args.IsValid == nil {
-		args.IsValid = func(*token.TokenArgs) bool {return true}
+		args.IsValid = func(*token.TokenArgs) bool { return true }
 	}
 
 	return &TokenClass{args.Name, regexps, args.Options, args.Type, args.ArgModFunc, args.IsValid, args.Tokens}
@@ -74,7 +74,8 @@ func (mtc *TokenClass) BuildTokens(args *token.TokenArgs) []token.Token {
 	for i, t := range mtc.tokens {
 		ret[i] = t.Copy()
 		ret[i].SetArgs(args)
-		if mtc.tokenType == token.SymmetricType {}
+		if mtc.tokenType == token.SymmetricType {
+		}
 	}
 	return ret
 }
