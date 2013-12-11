@@ -9,42 +9,45 @@ import (
 	"github.com/moechat/moeparser/token/htmltoken"
 )
 
-// The default moeparser tokens.
-//
-// This is here only for reference - changing this has no effect.
-// Use Lexer.AddTokenClass and Lexer.RemoveTokenClass instead.
-var DefaultTokenMap = map[string]token.TokenClass{
-	"`": &MoeTokenClass{
-		Options: token.NoParseInner,
-		Type:    token.OpenClose,
-		Tokens: []*htmltoken.Token{
-			{Name: "pre"},
-			{Name: "code"},
-		},
-	},
-	"*": &MoeTokenClass{
-		Type: token.OpenClose,
-		Tokens: []*htmltoken.Token{
-			{Name: "i"},
-		},
-	},
-	"**": &MoeTokenClass{
-		Type: token.OpenClose,
-		Tokens: []*htmltoken.Token{
-			{Name: "b"},
-		},
-	},
+var Lexer *lexer.Lexer
+
+type Parser struct {
+	lexer *lexer.Lexer
 }
 
-var Lexer = lexer.New(DefaultTokenMap)
-
-/*
-func Parse(b string) (string, error) {
-	body, err := BbCodeParse(body)
-	if err != nil {
-		return "", err
+func init() {
+	tokenMap := map[string]token.TokenClass{
+		"code": &TokenClass{
+			name:    "code",
+			regexps:   token.NewRegexpList(true, "`"),
+			options: token.NoParseInner,
+			tokenType:    token.SymmetricType,
+			tokens: []token.Token{
+				&htmltoken.Token{Name: "pre"},
+				&htmltoken.Token{Name: "code"},
+			},
+		},
+		"italic": &TokenClass{
+			name:  "italic",
+			regexps: token.NewRegexpList(true, "*"),
+			tokenType:  token.SymmetricType,
+			tokens: []token.Token{
+				&htmltoken.Token{Name: "i"},
+			},
+		},
+		"bold": &TokenClass{
+			name:  "bold",
+			regexps: token.NewRegexpList(true, "**"),
+			tokenType:  token.SymmetricType,
+			tokens: []token.Token{
+				&htmltoken.Token{Name: "b"},
+			},
+		},
 	}
 
-	return body, nil
+	var err error
+	Lexer, err = lexer.New(tokenMap)
+	if err != nil {
+		panic(err)
+	}
 }
-*/

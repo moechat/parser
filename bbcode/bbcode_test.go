@@ -1,8 +1,7 @@
-package moeparser_test
+package bbcode_test
 
 import (
 	"fmt"
-	"moeparser"
 	"testing"
 )
 
