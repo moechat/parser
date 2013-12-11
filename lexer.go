@@ -7,89 +7,125 @@ import (
 	"strconv"
 )
 
-// The Lexer type is used to convert raw text into tokens (http://en.wikipedia.org/wiki/Lexical_analysis)
-//
-// It is implemented using the regexp package, which is implemented using a NFA (http://en.wikipedia.org/wiki/Nondeterministic_finite_automaton), and is thus efficient in this use case.
-type Lexer struct {
-	tokenClasses   map[string]TokenClass // The map of TokenClasses by name
-	tokenClassById map[int]TokenClass    // The map of TokenClasses by capture group ID
+type matcherWrap struct {
+	Matcher
 
-	exprs map[string]bool // The set of expressions that are mapped to some token class
+	id      int              // A unique ID for this matcher
+	regexps []*regexp.Regexp // The compiled regexps
+}
+
+/*
+This is an implementation of the a Lexer, used to convert text into tokens
+(http://en.wikipedia.org/wiki/Lexical_analysis) using the regexp package.
+
+Because the regexp package is implemented using a NFA
+(http://en.wikipedia.org/wiki/Nondeterministic_finite_automaton),
+it's very effective for this use case.
+*/
+type Lexer struct {
+	matchersById map[int]*matcherWrap // All matchers by their ID
+	matchers     map[*matcherWrap]int // All matchers and their corresponding capture group ID
+
+	exprs map[string]bool // The set of regexps that are matched
 
 	expr   string         // The main regexp expression
 	regexp *regexp.Regexp // The regexp used to match tags
+
+	nextId int // The ID of the next matcher to be added
 }
 
-// Creates a new Lexer with the token map given.
-func New(tokenClasses map[string]TokenClass) (*Lexer, error) {
-	ret := &Lexer{
-		tokenClasses: tokenClasses,
-		exprs:        make(map[string]bool),
+// Creates a new Lexer.
+func NewLexer() *Lexer {
+	return &Lexer{matchers: make(map[*matcherWrap]int), exprs: make(map[string]bool)}
+}
+
+func MustCompile(matchers ...Matcher) *Lexer {
+	l, err := Compile(matchers...)
+	if err != nil {
+		panic(err)
 	}
-	for name, tokenClass := range ret.tokenClasses {
-		if tokenClass.Name() != name {
-			err := errors.New("A token class whose index did not match Name() was passed!")
-			return nil, err
-		}
-		for _, re := range tokenClass.Regexps() {
-			ret.exprs[re.String()] = true
-		}
+
+	return l
+}
+
+func Compile(matchers ...Matcher) (*Lexer, error) {
+	ret := NewLexer()
+	err := ret.AddMatchers(matchers...)
+	if err != nil {
+		return nil, err
 	}
-	err := ret.CompileRegexp()
+
+	err = ret.Compile()
 	if err != nil {
 		return nil, err
 	}
 	return ret, nil
 }
 
-// Adds the passed token class to the token class map.
-func (l *Lexer) AddTokenClass(tokenClass TokenClass) error {
-	if _, ok := l.tokenClasses[tokenClass.Name()]; ok {
-		err := errors.New("A TokenClass with the same name already exists!")
-		return err
-	}
-	regexps := tokenClass.Regexps()
-	for _, re := range regexps {
-		if l.exprs[re.String()] {
-			err := errors.New("Another TokenClass has an identical regexp!")
-			return err
+// Adds the passed matcher/matchers to the lexer
+func (l *Lexer) AddMatchers(matchers ...Matcher) error {
+	for _, matcher := range matchers {
+		wrap := &matcherWrap{Matcher: matcher, id: l.nextId}
+		l.nextId++
+		for _, expr := range matcher.Exprs() {
+			if l.exprs[expr] {
+				err := errors.New("Another matcher has an identical regexp!")
+				return err
+			}
 		}
-	}
 
-	for _, re := range regexps {
-		l.exprs[re.String()] = true
-	}
+		for _, expr := range matcher.Exprs() {
+			l.exprs[expr] = true
+		}
 
-	l.tokenClasses[tokenClass.Name()] = tokenClass
+		l.matchersById[wrap.id] = wrap
+		l.matchers[wrap] = -1
+	}
 
 	return nil
 }
 
 // Removes all instances of the token class specified from the token class map.
-func (l *Lexer) RemoveTokenClass(tokenClass TokenClass) {
-	for _, re := range tokenClass.Regexps() {
-		delete(l.exprs, re.String())
-	}
+func (l *Lexer) RemoveMatchers(matchers ...Matcher) {
+	for _, matcher := range matchers {
+		for wrap := range l.matchers {
+			if Matcher(wrap) == matcher {
+				for _, expr := range wrap.Exprs() {
+					delete(l.exprs, expr)
+				}
 
-	delete(l.tokenClasses, tokenClass.Name())
+				delete(l.matchersById, wrap.id)
+				delete(l.matchers, wrap)
+			}
+		}
+	}
+}
+
+func (l *Lexer) MustCompile() {
+	err := l.Compile()
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Creates the and compiles the regexp used by the Lexer.
 //
 // It must be run after adding or removing token classes in order for changes to take effect.
-func (l *Lexer) CompileRegexp() error {
-	l.tokenClassById = make(map[int]TokenClass)
-
+func (l *Lexer) Compile() error {
 	var err error
 
-	l.expr = "(?:"
-	for name, tokenClass := range l.tokenClasses {
-		for i, re := range tokenClass.Regexps() {
-			l.expr += fmt.Sprintf("(?P<_%02x%s>%s)|", i, name, re.String())
+	l.expr = ""
+	for matcher := range l.matchers {
+		matcher.regexps = make([]*regexp.Regexp, len(matcher.Exprs()))
+		for i, expr := range matcher.Exprs() {
+			matcher.regexps[i], err = regexp.Compile(expr)
+			if err != nil {
+				return err
+			}
+			l.expr += fmt.Sprintf("(?P<_%02x%x>%s)|", i, matcher.id, expr)
 		}
 	}
 	l.expr = l.expr[:len(l.expr)-1]
-	l.expr += ")"
 
 	l.regexp, err = regexp.Compile(l.expr)
 	if err != nil {
@@ -102,12 +138,15 @@ func (l *Lexer) CompileRegexp() error {
 	for i, name := range names {
 		if name != "" {
 			if name[0] == '_' {
-				if _, ok := l.tokenClasses[name[3:]]; usedNames[name] || !ok {
+				matcherId64, _ := strconv.ParseInt(name[3:], 16, 0)
+				matcherId := int(matcherId64)
+				matcher, ok := l.matchersById[matcherId]
+				if !ok {
 					return errors.New("lexer: capture group names starting with _ are reserved for use by the lexer! Your name is " + name)
 				}
 
 				usedNames[name] = true
-				l.tokenClassById[i] = l.tokenClasses[name[3:]]
+				l.matchers[matcher] = i
 			}
 		}
 	}
@@ -131,28 +170,28 @@ func (l *Lexer) Tokenize(data string) []Token {
 			break
 		}
 
-		for i, tokenClass := range l.tokenClassById {
+		for matcher, i := range l.matchers {
 			if indices[i*2] >= 0 {
 				if indices[i*2] != 0 {
 					ret = append(ret, NewTextToken(data[:indices[i*2]]))
 				}
 
 				exprId, _ := strconv.ParseInt(subexpNames[i][1:3], 16, 8)
-				tokenRegexp := tokenClass.Regexps()[exprId]
-				args := []string(tokenRegexp.FindStringSubmatch(data[indices[i*2]:indices[i*2+1]]))
+				currRe := matcher.regexps[exprId]
+				args := []string(currRe.FindStringSubmatch(data[indices[i*2]:indices[i*2+1]]))
 
 				idByName := make(map[string]int)
-				for i, name := range tokenRegexp.SubexpNames() {
+				for i, name := range currRe.SubexpNames() {
 					if name != "" {
 						idByName[name] = i
 					}
 				}
 
-				args, idByName = tokenClass.ModifyArgs(args, idByName)
+				args, idByName = matcher.ArgModFunc(args, idByName)
 				tokenArgs := NewTokenArgs(args, idByName)
 
-				if tokenClass.IsValid(tokenArgs) {
-					ret = append(ret, tokenClass.BuildTokens(tokenArgs)...)
+				if matcher.IsValid(tokenArgs) {
+					ret = append(ret, matcher.BuildTokens(tokenArgs)...)
 				} else {
 					ret = append(ret, NewTextToken(data[indices[i*2]:indices[i*2+1]]))
 				}
