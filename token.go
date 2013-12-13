@@ -19,6 +19,8 @@ const (
 	// - CloseClass type tokens without trailing whitespace/end of body
 	// - Single type tokens without leading and trailing whitespace
 	DisallowMidWord
+	// For compatibility with the bbcode module until it's folded into the moeparsing routines
+	HtmlSingle
 )
 
 // Token class types - return these in GetType()

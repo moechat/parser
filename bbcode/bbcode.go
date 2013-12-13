@@ -2,7 +2,7 @@ package bbcode
 
 import (
 	"bytes"
-	"github.com/moechat/moeparser"
+	"github.com/moechat/parser"
 	"html"
 	"html/template"
 	"regexp"
@@ -66,7 +66,7 @@ func closeNTags(tagPairStack *stack, n int) string {
 func closeTags(tagPair *bbTagPair) string {
 	endTags := ""
 	if tagPair.htmlTag.Tags != nil {
-		if tagPair.htmlTag.Options&moeparser.HtmlSingle == 0 {
+		if tagPair.htmlTag.Options&parser.HtmlSingle == 0 {
 			for _, tag := range tagPair.htmlTag.Tags {
 				endTags = "</" + tag + ">" + endTags
 			}
@@ -108,18 +108,18 @@ func Parse(body string) (string, error) {
 				args[0] = tagData[1]
 			}
 
-			if htmlTags.Options&(moeparser.TagBodyAsArg|moeparser.AllowTagBodyAsFirstArg) != 0 {
+			if htmlTags.Options&(parser.TokenBodyAsArg|parser.AllowTokenBodyAsFirstArg) != 0 {
 				closeTagRe, err := bbCloseTag(tagData[0])
 				if err != nil {
 					return "", err
 				}
 				closeTagLoc := closeTagRe.FindIndex([]byte(body))
 				if closeTagLoc == nil {
-					if htmlTags.Options&moeparser.PossibleSingle == 0 {
-						if htmlTags.Options&moeparser.AllowTagBodyAsFirstArg != 0 && args[0] == "" {
+					if htmlTags.Options&parser.PossibleSingle == 0 {
+						if htmlTags.Options&parser.AllowTokenBodyAsFirstArg != 0 && args[0] == "" {
 							args[0] = body[tagLoc[1]:]
 						}
-						if htmlTags.Options&moeparser.TagBodyAsArg != 0 {
+						if htmlTags.Options&parser.TokenBodyAsArg != 0 {
 							args[1] = body[tagLoc[1]:]
 							body = ""
 						}
@@ -130,11 +130,11 @@ func Parse(body string) (string, error) {
 						return "", err
 					}
 					openTagLoc := tagRe.FindIndex([]byte(body))
-					if htmlTags.Options&moeparser.PossibleSingle == 0 || openTagLoc == nil || closeTagLoc[0] < openTagLoc[0] {
-						if htmlTags.Options&moeparser.AllowTagBodyAsFirstArg != 0 && args[0] == "" {
+					if htmlTags.Options&parser.PossibleSingle == 0 || openTagLoc == nil || closeTagLoc[0] < openTagLoc[0] {
+						if htmlTags.Options&parser.AllowTokenBodyAsFirstArg != 0 && args[0] == "" {
 							args[0] = body[:closeTagLoc[0]]
 						}
-						if htmlTags.Options&moeparser.TagBodyAsArg != 0 {
+						if htmlTags.Options&parser.TokenBodyAsArg != 0 {
 							args[1] = body[:closeTagLoc[0]]
 							body = body[closeTagLoc[1]:]
 						}
@@ -202,7 +202,7 @@ func Parse(body string) (string, error) {
 
 			tagStack.push(&bbTagPair{htmlTags, tagData[0]})
 
-			if htmlTags.Options&moeparser.NoParseInner != 0 {
+			if htmlTags.Options&parser.NoParseInner != 0 {
 				closeTagRe, err := bbCloseTag(tagData[0])
 				if err != nil {
 					return "", err
@@ -217,7 +217,7 @@ func Parse(body string) (string, error) {
 					output += closeTags(tagStack.pop())
 					body = body[closeTagLoc[1]:]
 				}
-			} else if htmlTags.Options&moeparser.PossibleSingle != 0 {
+			} else if htmlTags.Options&parser.PossibleSingle != 0 {
 				closeTagRe, err := bbCloseTag(tagData[0])
 				if err != nil {
 					return "", err
@@ -230,12 +230,12 @@ func Parse(body string) (string, error) {
 					}
 					openTagLoc := tagRe.FindIndex([]byte(body))
 					if openTagLoc != nil && openTagLoc[0] < closeTagLoc[0] {
-						if htmlTags.Options&moeparser.HtmlSingle == 0 {
+						if htmlTags.Options&parser.HtmlSingle == 0 {
 							output += closeTags(tagStack.pop())
 						}
 					}
 				} else {
-					if htmlTags.Options&moeparser.HtmlSingle == 0 {
+					if htmlTags.Options&parser.HtmlSingle == 0 {
 						output += closeTags(tagStack.pop())
 					}
 				}
