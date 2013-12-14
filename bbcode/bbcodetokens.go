@@ -1,7 +1,7 @@
 package bbcode
 
 import (
-	"github.com/moechat/parser"
+	"github.com/moechat/parser/token"
 )
 
 // A type that determines what the parser will replace tags it finds with. The Attributes and CssProps are maps that assign a regexp parser group
@@ -22,8 +22,8 @@ var bbCodeTags = map[string]HtmlTags{
 		Tags:    []string{"span"},
 		Classes: [][]string{{"underline"}},
 	},
-	"pre":  {Options: parser.NoParseInner, Tags: []string{"pre"}},
-	"code": {Options: parser.NoParseInner, Tags: []string{"pre", "code"}},
+	"pre":  {Options: token.NoParseInner, Tags: []string{"pre"}},
+	"code": {Options: token.NoParseInner, Tags: []string{"pre", "code"}},
 	"color": {
 		Tags:     []string{"span"},
 		CssProps: []map[int8]string{{0: "color"}},
@@ -33,21 +33,21 @@ var bbCodeTags = map[string]HtmlTags{
 		CssProps: []map[int8]string{{0: "color"}},
 	},
 	"size": {
-		Options:  parser.NumberArgToPx,
+		Options:  token.NumberArgToPx,
 		Tags:     []string{"span"},
 		CssProps: []map[int8]string{{0: "font-size"}},
 	},
-	"noparse": {Options: parser.NoParseInner},
+	"noparse": {Options: token.NoParseInner},
 	"url": {
-		Options:    (parser.AllowTokenBodyAsFirstArg | parser.PossibleSingle),
+		Options:    (token.AllowTokenBodyAsFirstArg | token.PossibleSingle),
 		Tags:       []string{"a"},
 		Attributes: []map[int8]string{{0: "href"}},
 	},
 	"img": {
-		Options: (parser.AllowTokenBodyAsFirstArg |
-			parser.TokenBodyAsArg |
-			parser.PossibleSingle |
-			parser.HtmlSingle),
+		Options: (token.AllowTokenBodyAsFirstArg |
+			token.TokenBodyAsArg |
+			token.PossibleSingle |
+			token.HtmlSingle),
 		Tags:       []string{"img"},
 		Attributes: []map[int8]string{{0: "src", 1: "title"}},
 	},
@@ -57,7 +57,6 @@ var bbCodeTags = map[string]HtmlTags{
 }
 
 // One can insert use-case specific BBCode tags by using this function.
-// BBCode tags are parsed using a specific BBCode parser.
 //
 // IMPORTANT: This is ignored by parser.Parse - you should use AddTokenClass instead!
 // Only use this function if you plan on using parser.BbCodeParse()!

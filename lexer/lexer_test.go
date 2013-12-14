@@ -1,4 +1,4 @@
-package parser_test
+package lexer_test
 
 import (
 	"."

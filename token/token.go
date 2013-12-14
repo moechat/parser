@@ -1,4 +1,4 @@
-package parser
+package token
 
 // Options for Tokens - return these bits in GetOptions() to implement this behavior
 const (
@@ -35,6 +35,7 @@ const (
 	SymmetricToken
 )
 
+// The arguments for a token - these are the regexp capture groups
 type TokenArgs struct {
 	args     []string
 	idByName map[string]int
@@ -64,22 +65,13 @@ func (ta *TokenArgs) Size() int {
 	return ta.size
 }
 
-// The Token interface represents a lexical token (http://en.wikipedia.org/wiki/Lexical_analysis#Token)
-type TokenClass interface{}
+type TokenBuilder interface {
+	Build(args *TokenArgs) Token
+}
 
-type Token interface{}
-
-// A Matcher pairs a set of regexps and a set of tokens.
-type Matcher interface {
-	Exprs() []string
-
-	Flags() int
-	Type() int
-
-	// A function that modifies arguments (i.e. a function that converts a username to a user ID in @tagging)
-	ArgModFunc(args []string, namesById map[string]int) ([]string, map[string]int)
-	IsValid(args *TokenArgs) bool
-	BuildTokens(args *TokenArgs) []Token
+// The Token interface represents an instance of a token class
+type Token interface {
+	Type() string
 }
 
 // A special case of Token used to represent text that isn't matched by any other tokens
@@ -99,4 +91,8 @@ func (tt *TextToken) SetArgs(args *TokenArgs) {
 // Returns the TextToken's body
 func (tt *TextToken) Output() (string, error) {
 	return tt.body, nil
+}
+
+func (tt *TextToken) Type() string {
+	return "TEXT"
 }

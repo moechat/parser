@@ -1,11 +1,25 @@
-package parser
+package lexer
 
 import (
 	"errors"
 	"fmt"
+	"github.com/moechat/parser/token"
 	"regexp"
 	"strconv"
 )
+
+// A Matcher pairs a set of regexps and a set of tokens.
+type Matcher interface {
+	Exprs() []string
+
+	Flags() int
+	Type() int
+
+	// A function that modifies arguments (i.e. a function that converts a username to a user ID in @tagging)
+	ArgModFunc(args []string, namesById map[string]int) ([]string, map[string]int)
+	IsValid(args *token.TokenArgs) bool
+	BuildTokens(args *token.TokenArgs) []token.Token
+}
 
 type matcherWrap struct {
 	Matcher
@@ -35,7 +49,7 @@ type Lexer struct {
 }
 
 // Creates a new Lexer.
-func NewLexer() *Lexer {
+func New() *Lexer {
 	return &Lexer{matchers: make(map[*matcherWrap]int), exprs: make(map[string]bool)}
 }
 
@@ -49,7 +63,7 @@ func MustCompile(matchers ...Matcher) *Lexer {
 }
 
 func Compile(matchers ...Matcher) (*Lexer, error) {
-	ret := NewLexer()
+	ret := New()
 	err := ret.AddMatchers(matchers...)
 	if err != nil {
 		return nil, err
@@ -158,14 +172,14 @@ func (l *Lexer) Compile() error {
 //
 // If the tree has not been built, tokenize will run BuildCharTree().
 // BuildCharTree() *must* be run if you call AddTokenClass or RemoveTokenClass between Tokenize()'s
-func (l *Lexer) Tokenize(data string) []Token {
-	ret := make([]Token, 0)
+func (l *Lexer) Tokenize(data string) []token.Token {
+	ret := make([]token.Token, 0)
 	subexpNames := l.regexp.SubexpNames()
 
 	for data != "" {
 		indices := l.regexp.FindStringSubmatchIndex(data)
 		if indices == nil {
-			ret = append(ret, NewTextToken(data))
+			ret = append(ret, token.NewTextToken(data))
 			data = ""
 			break
 		}
@@ -173,7 +187,7 @@ func (l *Lexer) Tokenize(data string) []Token {
 		for matcher, i := range l.matchers {
 			if indices[i*2] >= 0 {
 				if indices[i*2] != 0 {
-					ret = append(ret, NewTextToken(data[:indices[i*2]]))
+					ret = append(ret, token.NewTextToken(data[:indices[i*2]]))
 				}
 
 				exprId, _ := strconv.ParseInt(subexpNames[i][1:3], 16, 8)
@@ -188,12 +202,12 @@ func (l *Lexer) Tokenize(data string) []Token {
 				}
 
 				args, idByName = matcher.ArgModFunc(args, idByName)
-				tokenArgs := NewTokenArgs(args, idByName)
+				tokenArgs := token.NewTokenArgs(args, idByName)
 
 				if matcher.IsValid(tokenArgs) {
 					ret = append(ret, matcher.BuildTokens(tokenArgs)...)
 				} else {
-					ret = append(ret, NewTextToken(data[indices[i*2]:indices[i*2+1]]))
+					ret = append(ret, token.NewTextToken(data[indices[i*2]:indices[i*2+1]]))
 				}
 				data = data[indices[i*2+1]:]
 			}
